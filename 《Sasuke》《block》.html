@@ -1,0 +1,1077 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Sasuke Blocks - Ultimate Mobile Puzzle</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap');
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+            touch-action: manipulation;
+        }
+        
+        :root {
+            --primary: #6366f1;
+            --secondary: #8b5cf6;
+            --accent: #ec4899;
+            --success: #10b981;
+            --bg-dark: #0f172a;
+            --bg-darker: #020617;
+            --surface: rgba(30, 41, 59, 0.7);
+            --surface-light: rgba(51, 65, 85, 0.5);
+            --text: #f1f5f9;
+            --text-muted: #94a3b8;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%);
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            color: var(--text);
+            overflow: hidden;
+            width: 100vw;
+            height: 100vh;
+            position: fixed;
+        }
+        
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background: radial-gradient(circle at 20% 50%, rgba(99, 102, 241, 0.15), transparent 50%),
+                        radial-gradient(circle at 80% 50%, rgba(236, 72, 153, 0.15), transparent 50%);
+            pointer-events: none;
+        }
+        
+        #mobile-container {
+            width: 100%;
+            height: 100%;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+        }
+        
+        .screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            transition: opacity 0.4s cubic-bezier(0.4, 0, 0.2, 1), 
+                        visibility 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+            padding: 20px;
+            z-index: 10;
+            opacity: 1;
+            visibility: visible;
+        }
+        
+        .screen.hidden {
+            opacity: 0;
+            visibility: hidden;
+            z-index: -1;
+        }
+
+        .game-title {
+            font-size: clamp(2.5rem, 10vw, 4rem);
+            margin-bottom: 15px;
+            background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #ec4899 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            font-weight: 900;
+            letter-spacing: -0.02em;
+            text-align: center;
+            animation: titleFloat 3s ease-in-out infinite;
+        }
+        
+        @keyframes titleFloat {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-5px); }
+        }
+        
+        .subtitle {
+            font-size: clamp(1rem, 4vw, 1.2rem);
+            margin-bottom: 30px;
+            color: var(--text-muted);
+            text-align: center;
+            font-weight: 500;
+            letter-spacing: 0.05em;
+        }
+        
+        .mobile-btn {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            border: none;
+            color: white;
+            padding: 18px 32px;
+            margin: 8px;
+            border-radius: 16px;
+            font-size: clamp(1rem, 4.5vw, 1.3rem);
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            width: 320px;
+            max-width: 90%;
+            text-align: center;
+            box-shadow: 0 10px 30px -5px rgba(99, 102, 241, 0.4), 
+                        0 0 0 1px rgba(255, 255, 255, 0.1) inset;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .mobile-btn::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(135deg, transparent, rgba(255, 255, 255, 0.1));
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        
+        .mobile-btn:hover::before {
+            opacity: 1;
+        }
+        
+        .mobile-btn:active {
+            transform: scale(0.96);
+            box-shadow: 0 5px 20px -5px rgba(99, 102, 241, 0.6);
+        }
+        
+        .btn-secondary {
+            background: var(--surface);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(148, 163, 184, 0.2);
+            box-shadow: 0 8px 25px -5px rgba(0, 0, 0, 0.3);
+        }
+        
+        #game-area {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 100%;
+            height: 100%;
+            padding: 10px;
+        }
+        
+        #game-header {
+            display: flex;
+            justify-content: space-between;
+            width: 100%;
+            max-width: 500px;
+            margin-bottom: 15px;
+            gap: 10px;
+        }
+        
+        .info-panel {
+            background: var(--surface);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            padding: 12px 16px;
+            border-radius: 16px;
+            text-align: center;
+            border: 1px solid rgba(148, 163, 184, 0.2);
+            flex: 1;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            transition: transform 0.2s;
+        }
+        
+        .info-panel:hover {
+            transform: translateY(-2px);
+        }
+        
+        .info-label {
+            font-size: clamp(0.7rem, 2.5vw, 0.85rem);
+            color: var(--text-muted);
+            margin-bottom: 4px;
+            font-weight: 600;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+        }
+        
+        .info-value {
+            font-size: clamp(1.5rem, 6vw, 2rem);
+            font-weight: 800;
+            background: linear-gradient(135deg, var(--primary), var(--accent));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        #game-board-container {
+            width: 100%;
+            max-width: 400px;
+            margin: 0 auto;
+            aspect-ratio: 1 / 1;
+            padding: 12px;
+            background: var(--surface);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-radius: 24px;
+            border: 1px solid rgba(148, 163, 184, 0.2);
+            box-shadow: 0 20px 50px -10px rgba(0, 0, 0, 0.5), 
+                        0 0 0 1px rgba(255, 255, 255, 0.05) inset;
+        }
+        
+        #game-canvas {
+            width: 100%;
+            height: 100%;
+            touch-action: none;
+            border-radius: 16px;
+            overflow: hidden;
+        }
+        
+        #blocks-display {
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            width: 100%;
+            max-width: 500px;
+            margin-top: 15px;
+            padding: 10px;
+            gap: 12px;
+        }
+        
+        .block-preview-container {
+            background: var(--surface);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-radius: 16px;
+            border: 1px solid rgba(148, 163, 184, 0.2);
+            padding: 10px;
+            text-align: center;
+            flex: 1;
+            height: 100px;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            transition: all 0.3s;
+        }
+        
+        .block-preview-container:active {
+            transform: scale(0.95);
+        }
+        
+        .preview-title {
+            color: var(--text-muted);
+            font-size: clamp(0.75rem, 3vw, 0.9rem);
+            margin-bottom: 5px;
+            font-weight: 600;
+            letter-spacing: 0.05em;
+            text-transform: uppercase;
+        }
+        
+        #draggable-block {
+            position: absolute;
+            pointer-events: none;
+            z-index: 20;
+            opacity: 0;
+            transition: opacity 0.2s;
+            filter: drop-shadow(0 10px 30px rgba(99, 102, 241, 0.5));
+        }
+        
+        #draggable-block.active {
+            opacity: 0.95;
+        }
+        
+        .draggable-cell {
+            position: absolute;
+            border-radius: 6px;
+            box-shadow: 0 0 15px rgba(255, 255, 255, 0.3),
+                        0 0 0 2px rgba(255, 255, 255, 0.2) inset;
+        }
+        
+        #mobile-controls {
+            display: flex;
+            justify-content: center;
+            gap: 12px;
+            margin-top: 15px;
+            width: 100%;
+            max-width: 400px;
+        }
+        
+        .control-btn {
+            background: var(--surface);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(148, 163, 184, 0.2);
+            color: white;
+            padding: 14px 20px;
+            border-radius: 14px;
+            font-size: clamp(1rem, 4vw, 1.1rem);
+            cursor: pointer;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            flex: 1;
+            text-align: center;
+            font-weight: 600;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        }
+        
+        .control-btn:active {
+            transform: scale(0.94);
+        }
+
+        .modal-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(2, 6, 23, 0.95);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 30;
+            padding: 20px;
+            text-align: center;
+        }
+        
+        #final-score {
+            font-size: clamp(3rem, 15vw, 5rem);
+            margin: 20px 0;
+            background: linear-gradient(135deg, var(--primary), var(--accent));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            font-weight: 900;
+            animation: scoreGlow 2s ease-in-out infinite;
+        }
+        
+        @keyframes scoreGlow {
+            0%, 100% { filter: drop-shadow(0 0 20px rgba(99, 102, 241, 0.5)); }
+            50% { filter: drop-shadow(0 0 40px rgba(236, 72, 153, 0.7)); }
+        }
+
+        #character-info {
+            overflow-y: auto;
+            padding: 60px 20px 20px;
+        }
+        
+        .character-img {
+            width: clamp(150px, 40vw, 200px);
+            aspect-ratio: 1 / 1;
+            border-radius: 50%;
+            margin: 20px 0;
+            border: 3px solid rgba(99, 102, 241, 0.5);
+            box-shadow: 0 0 50px rgba(99, 102, 241, 0.3),
+                        0 0 0 8px rgba(99, 102, 241, 0.1);
+            object-fit: cover;
+            transition: transform 0.3s;
+        }
+        
+        .character-img:hover {
+            transform: scale(1.05);
+        }
+        
+        .info-section {
+            margin-bottom: 25px;
+            background: var(--surface);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            padding: 24px;
+            border-radius: 20px;
+            border: 1px solid rgba(148, 163, 184, 0.2);
+            width: 100%;
+            max-width: 500px;
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+        }
+        
+        .info-text {
+            line-height: 1.7;
+            font-size: clamp(0.95rem, 3.5vw, 1.1rem);
+            color: var(--text);
+        }
+        
+        .ability-list {
+            list-style: none;
+            padding: 0;
+            margin-top: 15px;
+            text-align: left;
+        }
+        
+        .ability-list li {
+            padding: 14px;
+            margin: 10px 0;
+            background: linear-gradient(135deg, rgba(99, 102, 241, 0.1), rgba(236, 72, 153, 0.1));
+            border-left: 3px solid var(--primary);
+            border-radius: 12px;
+            font-size: clamp(0.9rem, 3.5vw, 1.05rem);
+            transition: transform 0.2s;
+        }
+        
+        .ability-list li:hover {
+            transform: translateX(5px);
+        }
+
+        .back-btn {
+            position: absolute;
+            top: 15px;
+            left: 15px;
+            background: var(--surface);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(148, 163, 184, 0.2);
+            color: white;
+            padding: 12px 20px;
+            border-radius: 12px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 1rem;
+            z-index: 40;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+            transition: all 0.2s;
+        }
+        
+        .back-btn:active {
+            transform: scale(0.95);
+        }
+
+        #background-animation {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+        }
+
+        #instructions-modal .modal-content {
+            background: var(--surface);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            padding: 30px;
+            border-radius: 24px;
+            border: 1px solid rgba(148, 163, 184, 0.2);
+            max-width: 500px;
+            text-align: left;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
+        }
+        
+        #instructions-modal p {
+            margin: 15px 0;
+            line-height: 1.7;
+            font-size: clamp(1rem, 4vw, 1.1rem);
+            color: var(--text);
+        }
+        
+        #instructions-modal h3 {
+            color: var(--primary);
+            margin: 25px 0 15px;
+        }
+    </style>
+</head>
+<body>
+    <div id="background-animation"></div>
+    <div id="mobile-container">
+
+        <!-- Main Menu -->
+        <div id="main-menu" class="screen">
+            <h1 class="game-title">SASUKE BLOCKS</h1>
+            <div class="subtitle">Master the Uchiha Power</div>
+            <img src="Sasuke.jpg" alt="Sasuke Uchiha" class="character-img" onerror="this.style.display='none'">
+            <div class="mobile-btn" id="start-btn">Begin Mission</div>
+            <div class="mobile-btn btn-secondary" id="character-btn">Uchiha Legacy</div>
+            <div class="mobile-btn btn-secondary" id="instructions-btn">How to Play</div>
+        </div>
+
+        <!-- Game Screen -->
+        <div id="game-screen" class="screen hidden">
+            <div class="back-btn" id="game-back-btn">← Menu</div>
+            <div id="game-area">
+                <div id="game-header">
+                    <div class="info-panel">
+                        <div class="info-label">Score</div>
+                        <div id="score" class="info-value">0</div>
+                    </div>
+                    <div class="info-panel">
+                        <div class="info-label">Level</div>
+                        <div id="level" class="info-value">1</div>
+                    </div>
+                    <div class="info-panel">
+                        <div class="info-label">Combo</div>
+                        <div id="combo" class="info-value">0</div>
+                    </div>
+                </div>
+                <div id="game-board-container">
+                    <div id="game-canvas"></div>
+                </div>
+                <div id="blocks-display">
+                    <div class="block-preview-container">
+                         <div class="preview-title">Next Block</div>
+                         <div id="next-block-canvas"></div>
+                    </div>
+                     <div class="block-preview-container" id="current-block-container">
+                        <div class="preview-title">Current Block</div>
+                        <div id="current-block-canvas"></div>
+                    </div>
+                </div>
+                <div id="mobile-controls">
+                    <div class="control-btn" id="rotate-btn">Rotate</div>
+                    <div class="control-btn" id="restart-btn">Restart</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Draggable Block Element -->
+        <div id="draggable-block"></div>
+
+        <!-- Game Over Screen -->
+        <div id="game-over" class="screen modal-overlay hidden">
+            <h2 class="game-title">Game Over</h2>
+            <div class="subtitle">The Uchiha legacy continues...</div>
+            <div id="final-score">0</div>
+            <div class="mobile-btn" id="restart-btn-2">Play Again</div>
+            <div class="mobile-btn btn-secondary" id="menu-btn-2">Main Menu</div>
+        </div>
+
+        <!-- Character Info Screen -->
+        <div id="character-info" class="screen hidden">
+            <div class="back-btn" id="char-back-btn">← Back</div>
+            <h2 class="game-title">UCHIHA SASUKE</h2>
+            <img src="https://i.imgur.com/3Q7Zc9q.png" alt="Sasuke Uchiha" class="character-img" onerror="this.style.display='none'">
+            <div class="info-section">
+                <p class="info-text">
+                    <strong>The Last Uchiha</strong> - Sole survivor of the Uchiha clan massacre, Sasuke embodies the struggle between revenge and redemption.
+                </p>
+                <h3 style="margin: 25px 0 15px; text-align:center;">Legendary Abilities</h3>
+                <ul class="ability-list">
+                    <li>🔥 Sharingan - The Copy Wheel Eye</li>
+                    <li>⚡ Chidori - One Thousand Birds</li>
+                    <li>⚫ Amaterasu - Black Flames</li>
+                    <li>💀 Susanoo - Divine Warrior</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Instructions Modal -->
+        <div id="instructions-modal" class="screen modal-overlay hidden">
+            <div class="modal-content">
+                <h2 class="game-title">How To Play</h2>
+                <p>🎮 <strong>Drag and Drop</strong> the current block onto the 8x8 grid to place it.</p>
+                <p>🔥 Complete a full row or column to clear it from the board and earn points.</p>
+                <p>⚡ Use the "Rotate" button to change the orientation of the current block before placing it.</p>
+                <p>💀 The game ends when there is no space to place the current block.</p>
+                <div class="mobile-btn" id="close-instructions-btn">Got It</div>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+    // =============================================================================
+    // Game System v4 - Drag and Drop Mechanic
+    // =============================================================================
+
+    // Game constants
+    const GRID_SIZE = 8;
+    const COLORS = {
+        sharingan: '#6366f1', chidori: '#8b5cf6', fire: '#ec4899',
+        curse: '#a855f7', susanoo: '#6366f1', sword: '#64748b', lightning: '#0ea5e9'
+    };
+    const BLOCKS = [
+        { id: 0, name: "Square", shape: [[1, 1], [1, 1]], color: COLORS.sharingan, value: 4 },
+        { id: 1, name: "Line3", shape: [[1, 1, 1]], color: COLORS.chidori, value: 3 },
+        { id: 2, name: "Line4", shape: [[1, 1, 1, 1]], color: COLORS.fire, value: 4 },
+        { id: 3, name: "L-Shape", shape: [[1, 0], [1, 0], [1, 1]], color: COLORS.curse, value: 4 },
+        { id: 4, name: "T-Shape", shape: [[1, 1, 1], [0, 1, 0]], color: COLORS.susanoo, value: 4 },
+        { id: 5, name: "Z-Shape", shape: [[1, 1, 0], [0, 1, 1]], color: COLORS.lightning, value: 4 },
+        { id: 6, name: "Single", shape: [[1]], color: COLORS.sword, value: 1 }
+    ];
+
+    // p5.js sketch instances
+    let mainSketch, currentBlockSketch, nextBlockSketch, backgroundSketch;
+
+    // Game state variables
+    let grid, currentBlock, nextBlock, score, level, linesCleared, gameOver, blockBag, comboCount;
+    let CELL_SIZE, BOARD_PIXEL_SIZE;
+    let ghostPosition = null;
+
+    // Drag and drop variables
+    let isDragging = false;
+    let dragOffsetX = 0;
+    let dragOffsetY = 0;
+    let dragStartX = 0;
+    let dragStartY = 0;
+
+    // =============================================================================
+    // P5.js SKETCHES
+    // =============================================================================
+
+    /** Main Game Board Sketch */
+    const mainSketchSetup = (p) => {
+        p.setup = () => {
+            const container = document.getElementById('game-board-container');
+            const canvas = p.createCanvas(container.clientWidth, container.clientHeight);
+            canvas.parent('game-canvas');
+            BOARD_PIXEL_SIZE = p.width;
+            CELL_SIZE = BOARD_PIXEL_SIZE / GRID_SIZE;
+            p.noLoop();
+        };
+
+        p.draw = () => {
+            p.background(15, 23, 42);
+            if (!grid) return;
+            drawGridCells(p);
+            if (ghostPosition) {
+                drawGhostBlock(p);
+            }
+        };
+    };
+
+    /** Block Preview Sketches */
+    const blockPreviewSketch = (blockProvider, parentId) => (p) => {
+        let container;
+        p.setup = () => {
+            container = document.getElementById(parentId);
+            p.createCanvas(container.clientWidth, container.clientHeight).parent(container);
+            p.noLoop();
+        };
+
+        p.draw = () => {
+            p.clear();
+            const block = blockProvider();
+            if (!block) return;
+
+            if (p.width !== container.clientWidth || p.height !== container.clientHeight) {
+                p.resizeCanvas(container.clientWidth, container.clientHeight);
+            }
+
+            const blockWidth = block.shape[0].length;
+            const blockHeight = block.shape.length;
+
+            const maxDim = Math.max(blockWidth, blockHeight);
+            const cellSize = Math.min(p.width / (maxDim + 1), p.height / (maxDim + 1));
+
+            const startX = (p.width - blockWidth * cellSize) / 2;
+            const startY = (p.height - blockHeight * cellSize) / 2;
+
+            for (let y = 0; y < blockHeight; y++) {
+                for (let x = 0; x < blockWidth; x++) {
+                    if (block.shape[y][x] === 1) {
+                        p.fill(block.color);
+                        p.stroke(255, 255, 255, 100);
+                        p.strokeWeight(2);
+                        p.rect(startX + x * cellSize, startY + y * cellSize, cellSize, cellSize, 6);
+                    }
+                }
+            }
+        };
+    };
+
+    /** Background Animation Sketch */
+    const backgroundSketchSetup = (p) => {
+        let particles = [];
+        
+        class Particle {
+            constructor() {
+                this.x = p.random(p.width);
+                this.y = p.random(p.height);
+                this.size = p.random(2, 5);
+                this.speedX = p.random(-0.5, 0.5);
+                this.speedY = p.random(-0.5, 0.5);
+                this.alpha = p.random(100, 200);
+            }
+            
+            update() {
+                this.x += this.speedX;
+                this.y += this.speedY;
+                
+                if (this.x < 0 || this.x > p.width) this.speedX *= -1;
+                if (this.y < 0 || this.y > p.height) this.speedY *= -1;
+            }
+            
+            display() {
+                p.noStroke();
+                p.fill(99, 102, 241, this.alpha);
+                p.circle(this.x, this.y, this.size);
+            }
+        }
+
+        p.setup = () => {
+            const canvas = p.createCanvas(p.windowWidth, p.windowHeight);
+            canvas.parent('background-animation');
+            canvas.style('z-index', '-1');
+            for (let i = 0; i < 50; i++) particles.push(new Particle());
+        };
+
+        p.draw = () => {
+            p.clear();
+            particles.forEach(particle => {
+                particle.update();
+                particle.display();
+            });
+        };
+
+        p.windowResized = () => p.resizeCanvas(p.windowWidth, p.windowHeight);
+    };
+
+    // =============================================================================
+    // Initialization
+    // =============================================================================
+    window.onload = () => {
+        mainSketch = new p5(mainSketchSetup);
+        currentBlockSketch = new p5(blockPreviewSketch(() => currentBlock, 'current-block-canvas'));
+        nextBlockSketch = new p5(blockPreviewSketch(() => nextBlock, 'next-block-canvas'));
+        backgroundSketch = new p5(backgroundSketchSetup);
+        setupEventListeners();
+        setupDragAndDrop();
+        showScreen('main-menu');
+    };
+
+    function initializeGame() {
+        grid = Array(GRID_SIZE).fill().map(() => Array(GRID_SIZE).fill(0));
+        blockBag = [];
+        refillBlockBag();
+        currentBlock = getNextBlock();
+        nextBlock = getNextBlock();
+        score = 0;
+        level = 1;
+        linesCleared = 0;
+        gameOver = false;
+        comboCount = 0;
+        ghostPosition = null;
+        isDragging = false;
+        updateAllDisplays();
+    }
+
+    function setupEventListeners() {
+        document.getElementById('start-btn').addEventListener('click', () => {
+            showScreen('game-screen');
+            initializeGame();
+        });
+        document.getElementById('character-btn').addEventListener('click', () => showScreen('character-info'));
+        document.getElementById('instructions-btn').addEventListener('click', () => showScreen('instructions-modal'));
+        document.getElementById('close-instructions-btn').addEventListener('click', () => showScreen('main-menu'));
+        document.getElementById('game-back-btn').addEventListener('click', () => showScreen('main-menu'));
+        document.getElementById('char-back-btn').addEventListener('click', () => showScreen('main-menu'));
+        document.getElementById('menu-btn-2').addEventListener('click', () => showScreen('main-menu'));
+
+        document.getElementById('rotate-btn').addEventListener('click', rotateCurrentBlock);
+        const restartAndPlay = () => {
+            showScreen('game-screen');
+            initializeGame();
+        };
+        document.getElementById('restart-btn').addEventListener('click', restartAndPlay);
+        document.getElementById('restart-btn-2').addEventListener('click', restartAndPlay);
+    }
+
+    // =============================================================================
+    // Drag and Drop System
+    // =============================================================================
+    function setupDragAndDrop() {
+        const currentBlockContainer = document.getElementById('current-block-container');
+        const draggableBlock = document.getElementById('draggable-block');
+        const gameCanvas = document.getElementById('game-canvas');
+
+        // Touch events for mobile
+        currentBlockContainer.addEventListener('touchstart', startDrag);
+        document.addEventListener('touchmove', drag);
+        document.addEventListener('touchend', endDrag);
+
+        // Mouse events for desktop
+        currentBlockContainer.addEventListener('mousedown', startDrag);
+        document.addEventListener('mousemove', drag);
+        document.addEventListener('mouseup', endDrag);
+
+        function startDrag(e) {
+            if (gameOver) return;
+
+            e.preventDefault();
+            isDragging = true;
+
+            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+
+            const containerRect = currentBlockContainer.getBoundingClientRect();
+            dragStartX = containerRect.left;
+            dragStartY = containerRect.top;
+
+            dragOffsetX = clientX - containerRect.left;
+            dragOffsetY = clientY - containerRect.top;
+
+            createDraggableBlock();
+            updateDraggableBlockPosition(clientX, clientY);
+            updateGhostPosition(clientX, clientY);
+        }
+
+        function drag(e) {
+            if (!isDragging) return;
+
+            e.preventDefault();
+
+            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+
+            updateDraggableBlockPosition(clientX, clientY);
+            updateGhostPosition(clientX, clientY);
+        }
+
+        function endDrag(e) {
+            if (!isDragging) return;
+
+            e.preventDefault();
+            isDragging = false;
+
+            draggableBlock.classList.remove('active');
+
+            const clientX = e.changedTouches ? e.changedTouches[0].clientX : e.clientX;
+            const clientY = e.changedTouches ? e.changedTouches[0].clientY : e.clientY;
+
+            const gameBoardRect = document.getElementById('game-board-container').getBoundingClientRect();
+            if (clientX >= gameBoardRect.left && clientX <= gameBoardRect.right &&
+                clientY >= gameBoardRect.top && clientY <= gameBoardRect.bottom) {
+
+                if (ghostPosition) {
+                    placeBlock(currentBlock, ghostPosition.x, ghostPosition.y);
+                }
+            }
+
+            ghostPosition = null;
+            mainSketch.redraw();
+        }
+
+        function createDraggableBlock() {
+            if (!currentBlock) return;
+
+            draggableBlock.innerHTML = '';
+
+            const blockWidth = currentBlock.shape[0].length;
+            const blockHeight = currentBlock.shape.length;
+
+            const cellSize = Math.min(50, 300 / Math.max(blockWidth, blockHeight));
+
+            for (let y = 0; y < blockHeight; y++) {
+                for (let x = 0; x < blockWidth; x++) {
+                    if (currentBlock.shape[y][x] === 1) {
+                        const cell = document.createElement('div');
+                        cell.className = 'draggable-cell';
+                        cell.style.width = `${cellSize}px`;
+                        cell.style.height = `${cellSize}px`;
+                        cell.style.backgroundColor = currentBlock.color;
+                        cell.style.left = `${x * cellSize}px`;
+                        cell.style.top = `${y * cellSize}px`;
+                        draggableBlock.appendChild(cell);
+                    }
+                }
+            }
+
+            draggableBlock.classList.add('active');
+        }
+
+        function updateDraggableBlockPosition(clientX, clientY) {
+            const draggableBlock = document.getElementById('draggable-block');
+            const blockWidth = currentBlock.shape[0].length;
+            const blockHeight = currentBlock.shape.length;
+
+            const cellSize = Math.min(50, 300 / Math.max(blockWidth, blockHeight));
+
+            draggableBlock.style.left = `${clientX - (blockWidth * cellSize) / 2}px`;
+            draggableBlock.style.top = `${clientY - (blockHeight * cellSize) / 2}px`;
+        }
+
+        function updateGhostPosition(clientX, clientY) {
+            const gameBoardRect = document.getElementById('game-board-container').getBoundingClientRect();
+
+            if (clientX >= gameBoardRect.left && clientX <= gameBoardRect.right &&
+                clientY >= gameBoardRect.top && clientY <= gameBoardRect.bottom) {
+
+                const gridX = Math.floor((clientX - gameBoardRect.left) / CELL_SIZE);
+                const gridY = Math.floor((clientY - gameBoardRect.top) / CELL_SIZE);
+
+                const startX = gridX - Math.floor(currentBlock.shape[0].length / 2);
+                const startY = gridY - Math.floor(currentBlock.shape.length / 2);
+
+                if (canPlaceBlock(currentBlock, startX, startY)) {
+                    ghostPosition = { x: startX, y: startY };
+                } else {
+                    ghostPosition = null;
+                }
+            } else {
+                ghostPosition = null;
+            }
+
+            mainSketch.redraw();
+        }
+    }
+
+    // =============================================================================
+    // Block System
+    // =============================================================================
+    function refillBlockBag() {
+        const allBlocks = [...Array(BLOCKS.length).keys()];
+        for (let i = allBlocks.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [allBlocks[i], allBlocks[j]] = [allBlocks[j], allBlocks[i]];
+        }
+        blockBag.push(...allBlocks);
+    }
+
+    function getNextBlock() {
+        if (blockBag.length < 3) refillBlockBag();
+        const block = JSON.parse(JSON.stringify(BLOCKS[blockBag.shift()]));
+        block.rotation = 0;
+        return block;
+    }
+
+    // =============================================================================
+    // Core Game Logic
+    // =============================================================================
+    function canPlaceBlock(block, startX, startY) {
+        for (let y = 0; y < block.shape.length; y++) {
+            for (let x = 0; x < block.shape[y].length; x++) {
+                if (block.shape[y][x] === 1) {
+                    const gridX = startX + x;
+                    const gridY = startY + y;
+                    if (gridX < 0 || gridX >= GRID_SIZE || gridY < 0 || gridY >= GRID_SIZE || grid[gridY][gridX] !== 0) {
+                        return false;
+                    }
+                }
+            }
+        }
+        return true;
+    }
+
+    function placeBlock(block, startX, startY) {
+        block.shape.forEach((row, y) => {
+            row.forEach((cell, x) => {
+                if (cell === 1) {
+                    grid[startY + y][startX + x] = { id: block.id, color: block.color };
+                }
+            });
+        });
+        score += block.value * level;
+        const cleared = checkAndClearLines();
+        if (cleared > 0) {
+            comboCount++;
+            score += cleared * 100 * level * comboCount;
+        } else {
+            comboCount = 0;
+        }
+        linesCleared += cleared;
+        level = Math.floor(linesCleared / 5) + 1;
+        currentBlock = nextBlock;
+        nextBlock = getNextBlock();
+        updateAllDisplays();
+        if (!hasValidMove(currentBlock)) {
+            endGame();
+        }
+    }
+
+    function checkAndClearLines() {
+        let rowsToClear = [];
+        let colsToClear = [];
+        for (let i = 0; i < GRID_SIZE; i++) {
+            if (grid[i].every(cell => cell !== 0)) rowsToClear.push(i);
+            if (grid.every(row => row[i] !== 0)) colsToClear.push(i);
+        }
+        rowsToClear.forEach(r => grid[r].fill(0));
+        colsToClear.forEach(c => grid.forEach(row => row[c] = 0));
+        return rowsToClear.length + colsToClear.length;
+    }
+
+    function hasValidMove(block) {
+        if (!block) return false;
+        for (let r = 0; r < 4; r++) {
+            const rotated = rotateBlock(block, r);
+            for (let y = 0; y <= GRID_SIZE - rotated.shape.length; y++) {
+                for (let x = 0; x <= GRID_SIZE - rotated.shape[0].length; x++) {
+                    if (canPlaceBlock(rotated, x, y)) return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    function rotateCurrentBlock() {
+        if (gameOver) return;
+        currentBlock = rotateBlock(currentBlock, 1);
+        currentBlockSketch.redraw();
+
+        if (isDragging) {
+            const draggableBlock = document.getElementById('draggable-block');
+            draggableBlock.innerHTML = '';
+            createDraggableBlock();
+        }
+    }
+
+    function rotateBlock(block, rotations = 1) {
+        let newShape = block.shape;
+        for (let i = 0; i < rotations; i++) {
+            newShape = newShape[0].map((_, colIndex) => newShape.map(row => row[colIndex]).reverse());
+        }
+        return { ...block, shape: newShape, rotation: (block.rotation + rotations) % 4 };
+    }
+
+    // =============================================================================
+    // UI & Drawing
+    // =============================================================================
+    function drawGridCells(p) {
+        for (let y = 0; y < GRID_SIZE; y++) {
+            for (let x = 0; x < GRID_SIZE; x++) {
+                const cellValue = grid[y][x];
+                if (cellValue !== 0) {
+                    p.fill(cellValue.color);
+                    p.stroke(255, 255, 255, 100);
+                    p.strokeWeight(2);
+                } else {
+                    p.fill(30, 41, 59);
+                    p.noStroke();
+                }
+                p.rect(x * CELL_SIZE, y * CELL_SIZE, CELL_SIZE, CELL_SIZE, 4);
+            }
+        }
+    }
+
+    function drawGhostBlock(p) {
+        p.fill(currentBlock.color + '60');
+        p.stroke(255, 255, 255, 80);
+        p.strokeWeight(2);
+        currentBlock.shape.forEach((row, y) => {
+            row.forEach((cell, x) => {
+                if (cell === 1) {
+                    p.rect((ghostPosition.x + x) * CELL_SIZE, (ghostPosition.y + y) * CELL_SIZE, CELL_SIZE, CELL_SIZE, 4);
+                }
+            });
+        });
+    }
+
+    function updateAllDisplays() {
+        document.getElementById('score').textContent = score;
+        document.getElementById('level').textContent = level;
+        document.getElementById('combo').textContent = comboCount > 0 ? `x${comboCount}` : '0';
+        currentBlockSketch.redraw();
+        nextBlockSketch.redraw();
+        mainSketch.redraw();
+    }
+
+    function endGame() {
+        gameOver = true;
+        document.getElementById('final-score').textContent = score;
+        showScreen('game-over');
+    }
+
+    // =============================================================================
+    // Helpers
+    // =============================================================================
+    function showScreen(screenId) {
+        document.querySelectorAll('.screen').forEach(s => s.classList.add('hidden'));
+        document.getElementById(screenId).classList.remove('hidden');
+    }
+    </script>
+</body>
+</html>
